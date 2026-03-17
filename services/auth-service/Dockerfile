@@ -1,14 +1,20 @@
-FROM node:20-alpine AS base
+FROM node:20-alpine AS source
+
 WORKDIR /app
-COPY package*.json ./
-RUN npm install --omit=dev && npm cache clean --force
 COPY . .
 
-FROM node:20-alpine AS prod
+FROM node:20-alpine
+
 WORKDIR /app
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
-COPY --from=base /app /app
+
+COPY package*.json ./
+RUN npm install --omit=dev
+
+COPY --from=source /app/src ./src
+
 ENV NODE_ENV=production
-USER appuser
 EXPOSE 3001
+
+USER node
+
 CMD ["npm", "start"]
