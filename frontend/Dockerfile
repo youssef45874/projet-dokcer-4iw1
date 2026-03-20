@@ -3,7 +3,7 @@ FROM node:20-alpine AS build
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm install
+RUN npm install --no-audit --no-fund
 
 COPY . .
 RUN npm run build
@@ -13,7 +13,7 @@ FROM node:20-alpine
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm install --omit=dev
+RUN npm install --omit=dev --no-audit --no-fund
 
 COPY server.cjs ./
 COPY --from=build /app/dist ./dist
