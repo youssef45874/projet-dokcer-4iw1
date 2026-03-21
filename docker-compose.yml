@@ -10,9 +10,24 @@ services:
       VITE_ORDER_SERVICE_URL: http://order-service:3002
       NODE_ENV: production
     depends_on:
-      - auth-service
-      - product-service
-      - order-service
+      auth-service:
+        condition: service_healthy
+      product-service:
+        condition: service_healthy
+      order-service:
+        condition: service_healthy
+    networks:
+      - ecommerce-network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   auth-service:
     build: ./services/auth-service
@@ -21,10 +36,26 @@ services:
     environment:
       PORT: 3001
       MONGODB_URI: mongodb://auth-db:27017/auth
-      JWT_SECRET: efrei_super_pass
       NODE_ENV: production
+    command: >
+      sh -c "export JWT_SECRET=$$(cat /run/secrets/jwt_secret) && npm start"
+    secrets:
+      - jwt_secret
     depends_on:
-      - auth-db
+      auth-db:
+        condition: service_started
+    networks:
+      - ecommerce-network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   product-service:
     build: ./services/product-service
@@ -33,10 +64,22 @@ services:
     environment:
       PORT: 3000
       MONGODB_URI: mongodb://product-db:27017/ecommerce
-      JWT_SECRET: efrei_super_pass
       NODE_ENV: production
     depends_on:
-      - product-db
+      product-db:
+        condition: service_started
+    networks:
+      - ecommerce-network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   order-service:
     build: ./services/order-service
@@ -45,24 +88,70 @@ services:
     environment:
       PORT: 3002
       MONGODB_URI: mongodb://order-db:27017/orders
-      JWT_SECRET: efrei_super_pass
       VITE_PRODUCT_SERVICE_URL: http://product-service:3000
       NODE_ENV: production
+    command: >
+      sh -c "export JWT_SECRET=$$(cat /run/secrets/jwt_secret) && npm start"
+    secrets:
+      - jwt_secret
     depends_on:
-      - order-db
-      - product-service
+      order-db:
+        condition: service_started
+      product-service:
+        condition: service_healthy
+    networks:
+      - ecommerce-network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3002/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   auth-db:
     image: mongo:6-jammy
     ports:
       - "27018:27017"
+    networks:
+      - ecommerce-network
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   product-db:
     image: mongo:6-jammy
     ports:
       - "27017:27017"
+    networks:
+      - ecommerce-network
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   order-db:
     image: mongo:6-jammy
     ports:
       - "27019:27017"
+    networks:
+      - ecommerce-network
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  ecommerce-network:
+    driver: bridge
+
+secrets:
+  jwt_secret:
+    file: ./secrets/jwt_secret.txt
