@@ -1,4 +1,4 @@
-# Déploiement E-Commerce Microservices (Docker)
+# README
 
 ## 1. Présentation du projet
 Application e-commerce découpée en microservices (frontend, auth, product, order), chaque service dans son conteneur, avec une base MongoDB dédiée.
